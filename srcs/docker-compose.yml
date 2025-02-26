@@ -1,0 +1,9 @@
+services:
+  mariadb:
+    build: ./requirements/mariadb
+    restart: unless-stopped
+    volumes:
+      - mariadb:/var/lib/mysql
+
+volumes:
+  mariadb:

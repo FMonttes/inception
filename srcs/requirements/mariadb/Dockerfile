@@ -1,9 +1,8 @@
-FROM alpine:3.20
+FROM debian:bullseye
 
-RUN apk update && \
-    apk add --no-cache mariadb mariadb-client mariadb-openrc
+RUN apt-get update && apt-get upgrade -y;\
+    apt install -y mariadb-server
 
-# Create necessary directories and set permissions
 RUN mkdir -p /run/mysqld /var/lib/mysql && \
     chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
@@ -12,7 +11,8 @@ RUN mysql_install_db --user=mysql --datadir=/var/lib/mysql && \
     mkdir -p /var/log/mysql && \
     chown -R mysql:mysql /var/log/mysql
 
-COPY /entrypoint.sh /entrypoint.sh
+COPY ./tools/entrypoint.sh /entrypoint.sh
+COPY ./conf/50-server.cnf /etc/mysql/mariadb.conf.d
 
 ENV MYSQL_DATABASE=inception_db
 ENV MYSQL_USER=felipe
@@ -23,6 +23,6 @@ RUN chmod +x /entrypoint.sh
 
 EXPOSE 3306
 
-USER mysql
+USER root
 
 ENTRYPOINT ["/entrypoint.sh"]
