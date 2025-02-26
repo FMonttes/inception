@@ -1,26 +1,51 @@
 #!/bin/sh
 
-echo "Iniciando MariaDB..."
-
-# Inicializar banco de dados se ainda não existir
 if [ ! -d "/var/lib/mysql/mysql" ]; then
+    # Initialize MySQL data directory
     mysql_install_db --user=mysql --datadir=/var/lib/mysql
-fi
 
-# Iniciar MariaDB temporariamente
-mysqld --datadir=/var/lib/mysql --skip-networking &
-sleep 5
+    # Start MySQL server temporarily
+    mysqld --user=mysql --datadir=/var/lib/mysql --skip-networking &
+    pid="$!"
 
-# Criar banco de dados e usuário se ainda não existir
-mysql -u root <<EOF
-CREATE DATABASE IF NOT EXISTS inception_db;
-CREATE USER IF NOT EXISTS 'felipe'@'%' IDENTIFIED BY '123456';
-GRANT ALL PRIVILEGES ON inception_db.* TO 'felipe'@'%';
+    # Wait for MySQL to start
+    until mysqladmin ping >/dev/null 2>&1; do
+        sleep 1
+    done
+
+    # Set root password and create database/user
+    mysql -u root << EOF
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
+CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
+CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
+GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
 FLUSH PRIVILEGES;
 EOF
 
-# Parar o processo temporário
-mysqladmin -u root shutdown
+    # Stop temporary MySQL server
+    kill -s TERM "$pid"
+    wait "$pid"
+fi
 
-# Iniciar MariaDB no modo foreground
-exec mariadbd --datadir=/var/lib/mysql
+# Start MySQL server
+exec mysqld --user=mysql --datadir=/var/lib/mysql --console
+```
+
+3. Rebuild and run:
+
+```bash
+# Remove any existing containers and volumes
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+docker volume prune -f
+
+# Build and run
+docker build -t mariadb:v1 .
+docker run -d \
+    --name mariadb \
+    -e MYSQL_DATABASE=inception_db \
+    -e MYSQL_USER=felipe \
+    -e MYSQL_PASSWORD=123456 \
+    -e MYSQL_ROOT_PASSWORD=123456 \
+    -p 3306:3306 \
+    mariadb:v1
