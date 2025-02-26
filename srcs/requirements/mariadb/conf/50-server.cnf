@@ -3,11 +3,17 @@
 
 # this is read by the standalone daemon and embedded servers
 [server]
-init=init.sql
+init-file=/usr/data/init.sql
 
 # this is only for the mysqld standalone daemon
 [mysqld]
-skip-networking
+bind-address=0.0.0.0
+port=3306
+user=mysql
+datadir=/var/lib/mysql
+socket=/var/run/mysqld/mysqld.sock
+
+#skip-networking
 
 # Galera-related settings
 [galera]
@@ -21,7 +27,6 @@ skip-networking
 #
 # Allow server to accept connections on all interfaces.
 #
-#bind-address=0.0.0.0
 #
 # Optional setting
 #wsrep_slave_threads=1

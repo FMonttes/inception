@@ -1,14 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 
-sudo touch init.sql
+# Verifica se o banco de dados já foi inicializado
+if [ ! -d "/var/lib/mysql/mysql" ]; then
+    # Inicializa o banco de dados
+    mysql_install_db --user=mysql --datadir=/var/lib/mysql
 
-echo << EOF > init.sql
-ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
-CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE};
-CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%';
-FLUSH PRIVILEGES;
-EOF
+    # Substitui variáveis de ambiente no arquivo init.sql
+    sed -i "s/\${MYSQL_DATABASE}/$MYSQL_DATABASE/g" /usr/data/init.sql
+    sed -i "s/\${MYSQL_USER}/$MYSQL_USER/g" /usr/data/init.sql
+    sed -i "s/\${MYSQL_PASSWORD}/$MYSQL_PASSWORD/g" /usr/data/init.sql
+    sed -i "s/\${MYSQL_ROOT_PASSWORD}/$MYSQL_ROOT_PASSWORD/g" /usr/data/init.sql
+fi
 
-
-exec mysqld_safe
+# Inicia o MariaDB em primeiro plano
+exec mysqld --user=mysql --console
